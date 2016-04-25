@@ -11,18 +11,18 @@ import SpriteKit
 
 class PlayerNode: SKSpriteNode {
     
-    var leftConstraint: SKConstraint!
-    var middleConstraint: SKConstraint!
-    var rightConstraint: SKConstraint!
+    var leftConstraint: SKConstraint?
+    var middleConstraint: SKConstraint?
+    var rightConstraint: SKConstraint?
     
     func disableAllConstraints() {
-        self.leftConstraint.enabled = false
-        self.middleConstraint.enabled = false
-        self.rightConstraint.enabled = false
+        leftConstraint?.enabled = false
+        middleConstraint?.enabled = false
+        rightConstraint?.enabled = false
     }
 
     func moveInDirection(direction: ButtonDirection, toLane lane: LaneState) {
-        self.disableAllConstraints()
+        disableAllConstraints()
         
         let changeInX = (direction == .Left) ? -70.0 : 70.0
         let rotation = (direction == .Left) ? M_PI/4 : -M_PI/4
@@ -37,17 +37,17 @@ class PlayerNode: SKSpriteNode {
         let completion = SKAction.runBlock { () -> Void in
             switch lane {
             case is LeftLane:
-                self.leftConstraint.enabled = true
+                self.leftConstraint?.enabled = true
             case is MiddleLane:
-                self.middleConstraint.enabled = true
+                self.middleConstraint?.enabled = true
             case is RightLane:
-                self.rightConstraint.enabled = true
+                self.rightConstraint?.enabled = true
             default:
                 break
             }
         }
         
         let sequenceAction = SKAction.sequence([moveGroup, completion])
-        self.runAction(sequenceAction)
+        runAction(sequenceAction)
     }
 }

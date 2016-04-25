@@ -8,30 +8,88 @@
 
 import UIKit
 import SpriteKit
+import GameplayKit
 
-class MainScene: SKScene {
+class MainScene: SKScene, SKPhysicsContactDelegate {
     
     var player: PlayerNode!
 
     override func didMoveToView(view: SKView) {
         super.didMoveToView(view)
         
-        self.size = view.frame.size
+        size = view.frame.size
         
-        if let foundPlayer = self.childNodeWithName("Player") as? PlayerNode {
-            self.player = foundPlayer
+        if let foundPlayer = childNodeWithName("Player") as? PlayerNode {
+            player = foundPlayer
         }
         
-        let center = self.size.width/2.0, difference = CGFloat(70.0)
+        let center = size.width/2.0, difference = CGFloat(70.0)
         
-        self.player.leftConstraint = SKConstraint.positionX(SKRange(constantValue: center - difference))
-        self.player.middleConstraint = SKConstraint.positionX(SKRange(constantValue: center))
-        self.player.rightConstraint = SKConstraint.positionX(SKRange(constantValue: center + difference))
+        player.leftConstraint = SKConstraint.positionX(SKRange(constantValue: center - difference))
+        player.middleConstraint = SKConstraint.positionX(SKRange(constantValue: center))
+        player.rightConstraint = SKConstraint.positionX(SKRange(constantValue: center + difference))
         
-        self.player.leftConstraint.enabled = false
-        self.player.rightConstraint.enabled = false
+        player.leftConstraint?.enabled = false
+        player.rightConstraint?.enabled = false
+        
+        player.constraints = [player.leftConstraint!, player.middleConstraint!, player.rightConstraint!]
+        
+        physicsWorld.contactDelegate = self
 
-        self.player.constraints = [self.player.leftConstraint, self.player.middleConstraint, self.player.rightConstraint]
+        let timer = NSTimer(timeInterval: 3.0, target: self, selector: #selector(spawnInObstacle(_:)), userInfo: nil, repeats: true)
+        NSRunLoop.mainRunLoop().addTimer(timer, forMode: NSRunLoopCommonModes)
+        
+        let camera = SKCameraNode()
+        self.camera = camera
+        camera.position = CGPoint(x: center, y: player.position.y + 200)
+        let moveForward = SKAction.moveBy(CGVectorMake(0, 100), duration: 1.0)
+        camera.runAction(SKAction.repeatActionForever(moveForward))
+        addChild(camera)
+        
+        player.xScale = 0.4; player.yScale = 0.4 // Makes car smaller to fit better between obstacles
+    }
+    
+    func spawnInObstacle(timer: NSTimer) {
+        if self.player.hidden {
+            timer.invalidate()
+            return
+        }
+        
+        let spriteGenerator = GKShuffledDistribution(lowestValue: 1, highestValue: 2)
+        let obstacle = SKSpriteNode(imageNamed: "Obstacle \(spriteGenerator.nextInt())")
+        obstacle.xScale = 0.3
+        obstacle.yScale = 0.3
+        
+        let physicsBody = SKPhysicsBody(circleOfRadius: 15)
+        physicsBody.contactTestBitMask = 0x00000001
+        physicsBody.pinned = true
+        physicsBody.allowsRotation = false
+        obstacle.physicsBody = physicsBody
+        
+        let center = size.width/2.0, difference = CGFloat(85.0)
+        var x: CGFloat = 0
+        
+        let laneGenerator = GKShuffledDistribution(lowestValue: 1, highestValue: 3)
+        switch laneGenerator.nextInt() {
+        case 1:
+            x = center - difference
+        case 2:
+            x = center
+        case 3:
+            x = center + difference
+        default:
+            fatalError("Number outside of [1, 3] generated")
+        }
+        
+        obstacle.position = CGPoint(x: x, y: (player.position.y + 800))
+        addChild(obstacle)
     }
 
+    func didBeginContact(contact: SKPhysicsContact) {
+        if contact.bodyA.node == player || contact.bodyB.node == player {
+            player.hidden = true
+            player.removeAllActions()
+            camera?.removeAllActions()
+        }
+    }
 }
