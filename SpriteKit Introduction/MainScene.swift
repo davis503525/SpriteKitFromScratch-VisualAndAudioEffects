@@ -9,6 +9,7 @@
 import UIKit
 import SpriteKit
 import GameplayKit
+import AVFoundation
 
 class MainScene: SKScene, SKPhysicsContactDelegate {
     
@@ -47,6 +48,12 @@ class MainScene: SKScene, SKPhysicsContactDelegate {
         addChild(camera)
         
         player.xScale = 0.4; player.yScale = 0.4 // Makes car smaller to fit better between obstacles
+        
+        let light = SKLightNode()
+        light.lightColor = UIColor.whiteColor()
+        light.falloff = 0.5
+        
+        player.addChild(light)
     }
     
     func spawnInObstacle(timer: NSTimer) {
@@ -83,13 +90,60 @@ class MainScene: SKScene, SKPhysicsContactDelegate {
         
         obstacle.position = CGPoint(x: x, y: (player.position.y + 800))
         addChild(obstacle)
+        
+        obstacle.lightingBitMask = 0xFFFFFFFF
+        obstacle.shadowCastBitMask = 0xFFFFFFFF
     }
 
     func didBeginContact(contact: SKPhysicsContact) {
         if contact.bodyA.node == player || contact.bodyB.node == player {
-            player.hidden = true
-            player.removeAllActions()
-            camera?.removeAllActions()
+            if let explosionPath = NSBundle.mainBundle().pathForResource("Explosion", ofType: "sks"),
+                let smokePath = NSBundle.mainBundle().pathForResource("Smoke", ofType: "sks"),
+                let explosion = NSKeyedUnarchiver.unarchiveObjectWithFile(explosionPath) as? SKEmitterNode,
+                let smoke = NSKeyedUnarchiver.unarchiveObjectWithFile(smokePath) as? SKEmitterNode {
+                
+                player.removeAllActions()
+                player.hidden = true
+                player.removeFromParent()
+                camera?.removeAllActions()
+                
+                explosion.position = player.position
+                smoke.position = player.position
+                
+                addChild(smoke)
+                addChild(explosion)
+            }
+        }
+    }
+    
+    // MARK: Scene Filter Example
+    func addBlurFilter() {
+        let blurFilter = CIFilter(name: "CIGaussianBlur")
+        blurFilter?.setDefaults()
+        blurFilter?.setValue(0.0, forKey: "inputRadius")
+        filter = blurFilter
+        shouldEnableEffects = true
+        runAction(SKAction.customActionWithDuration(1.0, actionBlock: { (node: SKNode, elapsedTime: CGFloat) in
+            let currentRadius = elapsedTime * 10.0
+            blurFilter?.setValue(currentRadius, forKey: "inputRadius")
+        }))
+    }
+    
+    // MARK: Audio Node Example
+    func addAudioNode() {
+        
+        listener = player
+        
+        let backgroundMusic = SKAudioNode(fileNamed: "backgroundMusic")
+        backgroundMusic.positional = false
+        
+        let explosion = SKAudioNode(fileNamed: "explosion")
+        explosion.autoplayLooped = false
+        
+        do {
+            try explosion.avAudioNode?.engine?.start() // Called when you want to play sound
+        } catch {
+            
         }
     }
 }
