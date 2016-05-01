@@ -140,6 +140,9 @@ class MainScene: SKScene, SKPhysicsContactDelegate {
         let explosion = SKAudioNode(fileNamed: "explosion")
         explosion.autoplayLooped = false
         
+        addChild(backgroundMusic)
+        addChild(explosion)
+        
         do {
             try explosion.avAudioNode?.engine?.start() // Called when you want to play sound
         } catch {
